@@ -1,52 +1,87 @@
 package compiler
 
+import (
+	"encoding/json"
+
+	"github.com/concrnt/concrnt/policy"
+)
+
 // DefaultVersion is the only policy engine version currently supported by concrnt.
 const DefaultVersion = "2025-12-23"
 
-// Conclusion values accepted for statement emit and defaults.
-var validConclusions = map[string]bool{
-	"ok":    true,
-	"ng":    true,
-	"allow": true,
-	"deny":  true,
-}
-
-// Expr is the concrnt policy expression tree.
-// It mirrors concrnt's policy.Expr but with `omitempty` on Args so that
-// leaf nodes serialize in the short form (e.g. {"op":"Load","const":"requester.ccid"}),
-// matching the hand-written policies in world-policies.
-type Expr struct {
-	Op    string `json:"op"`
-	Args  []Expr `json:"args,omitempty"`
-	Const any    `json:"const,omitempty"`
-}
-
-// Statement mirrors concrnt's policy.Statement.
-type Statement struct {
-	Action    string  `json:"action"`
-	Key       string  `json:"key,omitempty"`
-	Emit      string  `json:"emit"`
-	Reason    *string `json:"reason,omitempty"`
-	Condition Expr    `json:"condition"`
-}
-
 // VersionBody is the value of a version entry in a policy document.
-// concrnt's policy.Policy has no ParamSchema field, but real-world policy
-// documents carry one for client-side form generation, so it is passed through.
+// Statements and Defaults are concrnt's own policy types; ParamSchema is not
+// part of policy.Policy but real-world policy documents carry one for
+// client-side form generation, so it is passed through.
 type VersionBody struct {
-	Statements  []Statement       `json:"statements"`
-	Defaults    map[string]string `json:"defaults,omitempty"`
-	ParamSchema map[string]any    `json:"paramSchema,omitempty"`
+	Statements  []policy.Statement           `json:"statements"`
+	Defaults    map[string]policy.Conclusion `json:"defaults,omitempty"`
+	ParamSchema map[string]any               `json:"paramSchema,omitempty"`
 }
 
-// Document is a complete concrnt policy document (concrnt's policy.PolicyDocument).
+// Document is a complete concrnt policy document. It mirrors concrnt's
+// policy.PolicyDocument, but with typed version bodies (concrnt uses
+// map[string]any) and omitempty on Description.
 type Document struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	Versions    map[string]VersionBody `json:"versions"`
 }
 
-// Operator names understood by concrnt's policy engine.
+// exprJSON mirrors policy.Expr with `omitempty` on Args so that leaf nodes
+// serialize in the short form (e.g. {"op":"Load","const":"requester.ccid"}),
+// matching the hand-written policies in world-policies. policy.Expr itself
+// would emit "args": null there.
+type exprJSON struct {
+	Op    string     `json:"op"`
+	Args  []exprJSON `json:"args,omitempty"`
+	Const any        `json:"const,omitempty"`
+}
+
+func toExprJSON(e policy.Expr) exprJSON {
+	out := exprJSON{Op: e.Operator, Const: e.Const}
+	for _, arg := range e.Args {
+		out.Args = append(out.Args, toExprJSON(arg))
+	}
+	return out
+}
+
+// statementJSON is the serialization shape of policy.Statement, using exprJSON
+// for the condition.
+type statementJSON struct {
+	Action    string            `json:"action"`
+	Key       string            `json:"key,omitempty"`
+	Emit      policy.Conclusion `json:"emit"`
+	Reason    *string           `json:"reason,omitempty"`
+	Condition exprJSON          `json:"condition"`
+}
+
+func (b VersionBody) MarshalJSON() ([]byte, error) {
+	statements := make([]statementJSON, len(b.Statements))
+	for i, stmt := range b.Statements {
+		statements[i] = statementJSON{
+			Action:    stmt.Action,
+			Key:       stmt.Key,
+			Emit:      stmt.Emit,
+			Reason:    stmt.Reason,
+			Condition: toExprJSON(stmt.Condition),
+		}
+	}
+	return json.Marshal(struct {
+		Statements  []statementJSON              `json:"statements"`
+		Defaults    map[string]policy.Conclusion `json:"defaults,omitempty"`
+		ParamSchema map[string]any               `json:"paramSchema,omitempty"`
+	}{statements, b.Defaults, b.ParamSchema})
+}
+
+// isValidConclusion reports whether s is a conclusion a statement may emit or
+// a default may declare.
+func isValidConclusion(s string) bool {
+	return policy.ParseConclusion(s) != policy.UNSET
+}
+
+// Operator names understood by concrnt's policy engine
+// (registered in concrnt/policy/operators.go).
 const (
 	opAnd        = "And"
 	opOr         = "Or"

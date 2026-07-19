@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/concrnt/concrnt/policy"
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
@@ -64,7 +65,7 @@ func Compile(filename string, src string) (*Document, error) {
 
 	ec := newExprCompiler(helpers, errs)
 
-	statements := make([]Statement, 0, len(stmtRules))
+	statements := make([]policy.Statement, 0, len(stmtRules))
 	for _, rule := range stmtRules {
 		if stmt := compileStatement(rule, ec, errs); stmt != nil {
 			statements = append(statements, *stmt)

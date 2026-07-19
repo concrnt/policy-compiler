@@ -25,7 +25,7 @@ func compileCondition(t *testing.T, body string, extraRules string) any {
 		t.Fatalf("compile: %v\nsource:\n%s", err, src)
 	}
 	stmt := doc.Versions[DefaultVersion].Statements[0]
-	data, err := json.Marshal(stmt.Condition)
+	data, err := json.Marshal(toExprJSON(stmt.Condition))
 	if err != nil {
 		t.Fatal(err)
 	}

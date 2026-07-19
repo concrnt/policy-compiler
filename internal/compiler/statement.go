@@ -3,6 +3,7 @@ package compiler
 import (
 	"fmt"
 
+	"github.com/concrnt/concrnt/policy"
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
@@ -10,7 +11,7 @@ import (
 // concrnt Statement. The emit is the rule name; the action, key pattern, and
 // (for `contains reason` heads) the reason binding are extracted from the body
 // and the remaining literals become the condition.
-func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *Statement {
+func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *policy.Statement {
 	emit := string(rule.Head.Name)
 
 	if rule.Default {
@@ -129,15 +130,15 @@ func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *Statem
 			fmt.Sprintf(`bind it: %s := "reason text"`, reasonVar))
 	}
 
-	condition := Expr{Op: opConst, Const: true}
+	condition := policy.Expr{Operator: opConst, Const: true}
 	if len(rest) > 0 {
 		condition = ec.compileBody(rest)
 	}
 
-	return &Statement{
+	return &policy.Statement{
 		Action:    action,
 		Key:       key,
-		Emit:      emit,
+		Emit:      policy.ParseConclusion(emit),
 		Reason:    reason,
 		Condition: condition,
 	}

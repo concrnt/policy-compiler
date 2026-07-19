@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/concrnt/concrnt/policy"
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 // exprCompiler translates rule bodies into concrnt policy expression trees.
 type exprCompiler struct {
-	rules    map[string][]*ast.Rule // all rule groups of the module, by name
-	memo     map[string]*Expr
+	rules    map[string][]*ast.Rule // helper rule groups of the module, by name
+	memo     map[string]*policy.Expr
 	visiting map[string]bool
 	errs     *ErrorList
 }
@@ -18,18 +19,18 @@ type exprCompiler struct {
 func newExprCompiler(rules map[string][]*ast.Rule, errs *ErrorList) *exprCompiler {
 	return &exprCompiler{
 		rules:    rules,
-		memo:     map[string]*Expr{},
+		memo:     map[string]*policy.Expr{},
 		visiting: map[string]bool{},
 		errs:     errs,
 	}
 }
 
-var errExpr = Expr{Op: "<error>"}
+var errExpr = policy.Expr{Operator: "<error>"}
 
-// compileRuleGroup compiles all definitions of one rule name.
+// compileRuleGroup compiles all definitions of one helper rule name.
 // Multiple definitions are OR-ed together.
-func (c *exprCompiler) compileRuleGroup(rules []*ast.Rule) Expr {
-	exprs := make([]Expr, 0, len(rules))
+func (c *exprCompiler) compileRuleGroup(rules []*ast.Rule) policy.Expr {
+	exprs := make([]policy.Expr, 0, len(rules))
 	for _, rule := range rules {
 		if !c.checkRuleShape(rule) {
 			continue
@@ -69,16 +70,16 @@ func (c *exprCompiler) checkRuleShape(rule *ast.Rule) bool {
 }
 
 // compileBody AND-s the literals of one rule body.
-func (c *exprCompiler) compileBody(body ast.Body) Expr {
-	exprs := make([]Expr, 0, len(body))
+func (c *exprCompiler) compileBody(body ast.Body) policy.Expr {
+	exprs := make([]policy.Expr, 0, len(body))
 	for _, e := range body {
 		exprs = append(exprs, c.compileExpr(e))
 	}
 	return nAry(opAnd, exprs)
 }
 
-func (c *exprCompiler) compileExpr(e *ast.Expr) Expr {
-	var out Expr
+func (c *exprCompiler) compileExpr(e *ast.Expr) policy.Expr {
+	var out policy.Expr
 	switch terms := e.Terms.(type) {
 	case []*ast.Term:
 		out = c.compileCall(e.Loc(), terms)
@@ -89,12 +90,12 @@ func (c *exprCompiler) compileExpr(e *ast.Expr) Expr {
 		return errExpr
 	}
 	if e.Negated {
-		out = Expr{Op: opNot, Args: []Expr{out}}
+		out = policy.Expr{Operator: opNot, Args: []policy.Expr{out}}
 	}
 	return out
 }
 
-func (c *exprCompiler) compileCall(loc *ast.Location, terms []*ast.Term) Expr {
+func (c *exprCompiler) compileCall(loc *ast.Location, terms []*ast.Term) policy.Expr {
 	opRef, ok := terms[0].Value.(ast.Ref)
 	if !ok {
 		c.errs.addf(loc, "unsupported expression")
@@ -104,13 +105,13 @@ func (c *exprCompiler) compileCall(loc *ast.Location, terms []*ast.Term) Expr {
 
 	switch opRef.String() {
 	case "equal": // ==
-		return Expr{Op: opEq, Args: []Expr{c.compileTerm(args[0]), c.compileTerm(args[1])}}
+		return policy.Expr{Operator: opEq, Args: []policy.Expr{c.compileTerm(args[0]), c.compileTerm(args[1])}}
 	case "neq": // !=
-		return Expr{Op: opNot, Args: []Expr{
-			{Op: opEq, Args: []Expr{c.compileTerm(args[0]), c.compileTerm(args[1])}},
+		return policy.Expr{Operator: opNot, Args: []policy.Expr{
+			{Operator: opEq, Args: []policy.Expr{c.compileTerm(args[0]), c.compileTerm(args[1])}},
 		}}
 	case "internal.member_2": // `x in xs` — concrnt's Contains takes (list, element)
-		return Expr{Op: opContains, Args: []Expr{c.compileTerm(args[1]), c.compileTerm(args[0])}}
+		return policy.Expr{Operator: opContains, Args: []policy.Expr{c.compileTerm(args[1]), c.compileTerm(args[0])}}
 	case "eq": // unification `=`
 		c.errs.add(loc, "unification (`=`) is not supported", "use `==` for comparison")
 		return errExpr
@@ -138,20 +139,20 @@ func (c *exprCompiler) compileCall(loc *ast.Location, terms []*ast.Term) Expr {
 	}
 }
 
-func (c *exprCompiler) compileCCUriOwner(loc *ast.Location, args []*ast.Term) Expr {
+func (c *exprCompiler) compileCCUriOwner(loc *ast.Location, args []*ast.Term) policy.Expr {
 	if len(args) != 1 {
 		c.errs.add(loc, fmt.Sprintf("ccuri_owner() takes exactly 1 argument, got %d", len(args)), "")
 		return errExpr
 	}
-	return Expr{Op: opCCUriOwner, Args: []Expr{c.compileTerm(args[0])}}
+	return policy.Expr{Operator: opCCUriOwner, Args: []policy.Expr{c.compileTerm(args[0])}}
 }
 
-func (c *exprCompiler) compileTerm(t *ast.Term) Expr {
+func (c *exprCompiler) compileTerm(t *ast.Term) policy.Expr {
 	switch v := t.Value.(type) {
 	case ast.Boolean:
-		return Expr{Op: opConst, Const: bool(v)}
+		return policy.Expr{Operator: opConst, Const: bool(v)}
 	case ast.String:
-		return Expr{Op: opConst, Const: string(v)}
+		return policy.Expr{Operator: opConst, Const: string(v)}
 	case ast.Number:
 		f, ok := v.Float64()
 		if !ok {
@@ -159,7 +160,7 @@ func (c *exprCompiler) compileTerm(t *ast.Term) Expr {
 			return errExpr
 		}
 		// float64 matches what concrnt sees after JSON-decoding the context
-		return Expr{Op: opConst, Const: f}
+		return policy.Expr{Operator: opConst, Const: f}
 	case ast.Null:
 		c.errs.add(t.Loc(), "null is not supported", "")
 		return errExpr
@@ -182,7 +183,7 @@ func (c *exprCompiler) compileTerm(t *ast.Term) Expr {
 }
 
 // compileArray turns an array of scalar literals into a Const expression.
-func (c *exprCompiler) compileArray(arr *ast.Array) Expr {
+func (c *exprCompiler) compileArray(arr *ast.Array) policy.Expr {
 	vals := make([]any, 0, arr.Len())
 	ok := true
 	arr.Foreach(func(el *ast.Term) {
@@ -207,11 +208,11 @@ func (c *exprCompiler) compileArray(arr *ast.Array) Expr {
 	if !ok {
 		return errExpr
 	}
-	return Expr{Op: opConst, Const: vals}
+	return policy.Expr{Operator: opConst, Const: vals}
 }
 
 // compileRef turns `input.a.b.c` into a Load expression.
-func (c *exprCompiler) compileRef(loc *ast.Location, ref ast.Ref) Expr {
+func (c *exprCompiler) compileRef(loc *ast.Location, ref ast.Ref) policy.Expr {
 	head, ok := ref[0].Value.(ast.Var)
 	if !ok || head != ast.InputRootDocument.Value.(ast.Var) {
 		c.errs.add(loc, fmt.Sprintf("reference %v is not supported", ref),
@@ -248,11 +249,11 @@ func (c *exprCompiler) compileRef(loc *ast.Location, ref ast.Ref) Expr {
 		return errExpr
 	}
 
-	return Expr{Op: opLoad, Const: strings.Join(segs, ".")}
+	return policy.Expr{Operator: opLoad, Const: strings.Join(segs, ".")}
 }
 
-// inlineRule expands a reference to another rule of the same module.
-func (c *exprCompiler) inlineRule(loc *ast.Location, name string) Expr {
+// inlineRule expands a reference to a helper rule of the same module.
+func (c *exprCompiler) inlineRule(loc *ast.Location, name string) policy.Expr {
 	if strings.HasPrefix(name, "$") {
 		c.errs.add(loc, "wildcard or generated variables are not supported", "")
 		return errExpr
@@ -288,9 +289,9 @@ func (c *exprCompiler) inlineRule(loc *ast.Location, name string) Expr {
 
 // nAry wraps exprs in the given operator, unwrapping the trivial 1-element case
 // so output matches hand-written policies.
-func nAry(op string, exprs []Expr) Expr {
+func nAry(op string, exprs []policy.Expr) policy.Expr {
 	if len(exprs) == 1 {
 		return exprs[0]
 	}
-	return Expr{Op: op, Args: exprs}
+	return policy.Expr{Operator: op, Args: exprs}
 }

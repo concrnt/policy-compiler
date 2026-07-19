@@ -9,29 +9,14 @@ import (
 	"github.com/concrnt/concrnt/policy"
 )
 
-// toPolicy converts a compiled VersionBody into a concrnt policy.Policy by
-// round-tripping through JSON, exactly as a server consuming the compiled
-// document would.
-func toPolicy(t *testing.T, body VersionBody) policy.Policy {
-	t.Helper()
-	data, err := json.Marshal(body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var p policy.Policy
-	if err := json.Unmarshal(data, &p); err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
 func compileExample(t *testing.T, name string) policy.Policy {
 	t.Helper()
 	doc, err := CompileFile("../../examples/" + name + ".rego")
 	if err != nil {
 		t.Fatalf("compile %s: %v", name, err)
 	}
-	return toPolicy(t, doc.Versions[DefaultVersion])
+	body := doc.Versions[DefaultVersion]
+	return policy.Policy{Statements: body.Statements, Defaults: body.Defaults}
 }
 
 func evaluate(t *testing.T, p policy.Policy, req policy.RequestContext, action, key string) policy.Conclusion {

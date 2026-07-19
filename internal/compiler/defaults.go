@@ -3,12 +3,13 @@ package compiler
 import (
 	"fmt"
 
+	"github.com/concrnt/concrnt/policy"
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 // extractDefaults parses the reserved `defaults := {"<action>": "<conclusion>"}`
 // rule into the document's defaults map.
-func extractDefaults(rules []*ast.Rule, errs *ErrorList) map[string]string {
+func extractDefaults(rules []*ast.Rule, errs *ErrorList) map[string]policy.Conclusion {
 	if len(rules) == 0 {
 		return nil
 	}
@@ -38,7 +39,7 @@ func extractDefaults(rules []*ast.Rule, errs *ErrorList) map[string]string {
 		return nil
 	}
 
-	out := map[string]string{}
+	out := map[string]policy.Conclusion{}
 	obj.Foreach(func(k, v *ast.Term) {
 		ks, ok := k.Value.(ast.String)
 		if !ok {
@@ -46,12 +47,12 @@ func extractDefaults(rules []*ast.Rule, errs *ErrorList) map[string]string {
 			return
 		}
 		vs, ok := v.Value.(ast.String)
-		if !ok || !validConclusions[string(vs)] {
+		if !ok || !isValidConclusion(string(vs)) {
 			errs.add(v.Loc(), fmt.Sprintf("invalid default conclusion %v for action %q", v, ks),
 				"valid conclusions are: ok, ng, allow, deny")
 			return
 		}
-		out[string(ks)] = string(vs)
+		out[string(ks)] = policy.ParseConclusion(string(vs))
 	})
 	return out
 }
