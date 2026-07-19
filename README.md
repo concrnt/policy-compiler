@@ -51,7 +51,7 @@ deny if {
 concrnt-policy-compiler build -o dist/ policies/
 
 # 単一ファイルを標準出力へ
-concrnt-policy-compiler build -stdout policies/whisper.rego
+concrnt-policy-compiler build --stdout policies/whisper.rego
 
 # 検証のみ(CI向け、エラーがあれば非0終了)
 concrnt-policy-compiler check policies/
