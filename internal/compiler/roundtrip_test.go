@@ -3,6 +3,7 @@ package compiler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 
@@ -103,6 +104,81 @@ func TestRoundtripInlineReadWrite(t *testing.T) {
 	}
 	if got := evaluate(t, p, req("con1stranger", false), "record:create", "./m"); got != policy.DENY {
 		t.Errorf("private write by stranger: want deny, got %s", got)
+	}
+}
+
+// fakeCaller implements policy.ConcrntCaller for roundtrip tests, recording
+// the arguments of the last call and returning a canned result.
+type fakeCaller struct {
+	result      any
+	err         error
+	gotResolver string
+	gotAPI      string
+	gotParams   map[string]string
+}
+
+func (f *fakeCaller) ConcrntCall(ctx context.Context, resolver string, api string, params map[string]string) (any, error) {
+	f.gotResolver = resolver
+	f.gotAPI = api
+	f.gotParams = params
+	return f.result, f.err
+}
+
+// TestRoundtripRestrictAckees runs the compiled restrict-ackees policy through
+// concrnt's engine with a fake ConcrntCaller. The statement key is "" so it
+// only fires when the policy is evaluated with an empty key.
+func TestRoundtripRestrictAckees(t *testing.T) {
+	p := compileExample(t, "restrict-ackees")
+
+	req := func(ccid string, caller *fakeCaller) policy.RequestContext {
+		return policy.RequestContext{
+			Requester: map[string]any{"ccid": ccid},
+			Self:      map[string]any{"key": "cckv://con1owner/profile"},
+			Params:    map[string]any{},
+			Caller:    caller,
+		}
+	}
+
+	// the owner reads their own record: allowed even when the ack list is empty
+	// (note: concrnt's Eval is eager, so the API call happens regardless)
+	caller := &fakeCaller{result: []any{}}
+	if got := evaluate(t, p, req("con1owner", caller), "record:read", ""); got != policy.OK {
+		t.Errorf("owner read: want ok, got %s", got)
+	}
+
+	// an ackee of the owner: the API returns a non-empty ack list
+	caller = &fakeCaller{result: []any{map[string]any{"document": `{"kind":"ack"}`}}}
+	if got := evaluate(t, p, req("con1friend", caller), "record:read", ""); got != policy.OK {
+		t.Errorf("ackee read: want ok, got %s", got)
+	}
+	if caller.gotResolver != "con1owner" || caller.gotAPI != "net.concrnt.core.acknowledges" {
+		t.Errorf("unexpected call target: resolver=%q api=%q", caller.gotResolver, caller.gotAPI)
+	}
+	if caller.gotParams["from"] != "con1owner" || caller.gotParams["to"] != "con1friend" {
+		t.Errorf("unexpected call params: %v", caller.gotParams)
+	}
+
+	// a stranger: the API returns an empty list -> default ng
+	caller = &fakeCaller{result: []any{}}
+	if got := evaluate(t, p, req("con1stranger", caller), "record:read", ""); got != policy.NG {
+		t.Errorf("stranger read: want ng, got %s", got)
+	}
+
+	// the API call fails: fail-closed to default ng
+	caller = &fakeCaller{err: errors.New("resolver offline")}
+	conclusion, _, err := policy.EvaluatePolicy(context.Background(), p, req("con1friend", caller), "record:read", "")
+	if err != nil {
+		t.Fatalf("EvaluatePolicy: %v", err)
+	}
+	if conclusion != policy.NG {
+		t.Errorf("caller error: want ng (fail-closed), got %s", conclusion)
+	}
+
+	// an anonymous requester (empty ccid) is denied even if the API would
+	// return something for to=""
+	caller = &fakeCaller{result: []any{map[string]any{"document": "x"}}}
+	if got := evaluate(t, p, req("", caller), "record:read", ""); got != policy.NG {
+		t.Errorf("anonymous read: want ng, got %s", got)
 	}
 }
 

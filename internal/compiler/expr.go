@@ -132,6 +132,23 @@ func (c *exprCompiler) compileCall(loc *ast.Location, terms []*ast.Term) policy.
 		return errExpr
 	case "ccuri_owner":
 		return c.compileCCUriOwner(loc, args)
+	case "concrnt_call":
+		if len(args) < 2 || (len(args)-2)%2 != 0 {
+			c.errs.add(loc, fmt.Sprintf("concrnt_call() takes a resolver, an api name, and key/value pairs; got %d arguments", len(args)),
+				`e.g. concrnt_call(ccuri_owner(input.self.key), "net.concrnt.core.acknowledges", "from", owner, "to", input.requester.ccid)`)
+			return errExpr
+		}
+		callArgs := make([]policy.Expr, 0, len(args))
+		for _, arg := range args {
+			callArgs = append(callArgs, c.compileTerm(arg))
+		}
+		return policy.Expr{Operator: opConcrnt, Args: callArgs}
+	case "is_not_empty":
+		if len(args) != 1 {
+			c.errs.add(loc, fmt.Sprintf("is_not_empty() takes exactly 1 argument, got %d", len(args)), "")
+			return errExpr
+		}
+		return policy.Expr{Operator: opIsNotEmpty, Args: []policy.Expr{c.compileTerm(args[0])}}
 	default:
 		c.errs.add(loc, fmt.Sprintf("built-in function %q is not supported", opRef.String()),
 			"supported operations: ==, !=, `in`, `not`, and ccuri_owner()")

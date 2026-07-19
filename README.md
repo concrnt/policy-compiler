@@ -74,7 +74,7 @@ deny contains "DENY: you are not a participant" if {
 ```
 
 - **action**: `input.action == "record:read"` のリテラルで指定します(必須・1個)。コンパイル時に `Statement.Action` に抽出され、条件式には残りません。
-- **key**: `key_matches("<pattern>")` で指定します(必須)。パターンは `.`(そのリソース自身)、`./*`(子孫)、`*`(すべて)など。concrntエンジンは `*` をワイルドカードとして解釈します。全keyに適用するなら `key_matches("*")` と明示します。
+- **key**: `key_matches("<pattern>")` で指定します(必須)。パターンは `.`(アタッチ先自身)、`./*`(子孫のみ)、`""` または `*`(自身と子孫)。concrntエンジンは `*` をワイルドカードとして解釈します。全keyに適用するなら `key_matches("*")` と明示します。
 - **reason** は3通り:
 
 ```rego
@@ -148,6 +148,8 @@ concrntのポリシーエンジンは8つのオペレータ(`And` `Or` `Not` `Eq
 | `x in list` | `Contains(list, x)` |
 | `not <式>` | `Not` |
 | `ccuri_owner(x)` | `CCUriOwner`(CCURIから所有者IDを取り出す) |
+| `concrnt_call(resolver, api, k1, v1, ...)` | `ConcrntCall`(named APIの呼び出し。例: `"net.concrnt.core.acknowledges"`。key/valueペアで引数を渡す) |
+| `is_not_empty(x)` | `IsNotEmpty`(配列/文字列/マップが空でないか) |
 | `true` / `"str"` / `1.5` / `["a", "b"]` | `Const` |
 
 `input` のルートは `requester` `requester_domain` `parent` `self` `params` `globals`(+statement body直下のみ `action` と `key_matches`)です。

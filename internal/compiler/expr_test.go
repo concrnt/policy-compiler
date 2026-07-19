@@ -109,6 +109,18 @@ func TestExprTranslation(t *testing.T) {
 			}},
 		},
 		{
+			name: "concrnt call wrapped in is_not_empty",
+			body: `is_not_empty(concrnt_call(ccuri_owner(input.self.key), "net.concrnt.core.acknowledges", "to", input.requester.ccid))`,
+			want: map[string]any{"op": "IsNotEmpty", "args": []any{
+				map[string]any{"op": "ConcrntCall", "args": []any{
+					map[string]any{"op": "CCUriOwner", "args": []any{load("self.key")}},
+					map[string]any{"op": "Const", "const": "net.concrnt.core.acknowledges"},
+					map[string]any{"op": "Const", "const": "to"},
+					load("requester.ccid"),
+				}},
+			}},
+		},
+		{
 			name:  "helper rule inlined with or",
 			body:  `not can_read`,
 			extra: "can_read if input.self.author == input.requester.ccid\ncan_read if input.params.open\n",
@@ -231,6 +243,21 @@ func TestCompileErrors(t *testing.T) {
 			name:    "missing key pattern",
 			src:     "package test\n\ndeny if {\n\tinput.action == \"record:read\"\n\ttrue\n}\n",
 			wantErr: "has no key pattern",
+		},
+		{
+			name:    "concrnt_call too few arguments",
+			src:     testHeader + "is_not_empty(concrnt_call(\"con1x\"))\n}\n",
+			wantErr: "concrnt_call() takes a resolver, an api name, and key/value pairs",
+		},
+		{
+			name:    "concrnt_call odd params",
+			src:     testHeader + "is_not_empty(concrnt_call(\"con1x\", \"net.concrnt.core.acknowledges\", \"from\"))\n}\n",
+			wantErr: "concrnt_call() takes a resolver, an api name, and key/value pairs",
+		},
+		{
+			name:    "is_not_empty arity",
+			src:     testHeader + "is_not_empty(input.params.a, input.params.b)\n}\n",
+			wantErr: "is_not_empty() takes exactly 1 argument",
 		},
 		{
 			name:    "key_matches arity",

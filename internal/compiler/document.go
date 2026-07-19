@@ -47,10 +47,12 @@ func toExprJSON(e policy.Expr) exprJSON {
 }
 
 // statementJSON is the serialization shape of policy.Statement, using exprJSON
-// for the condition.
+// for the condition. Key has no omitempty: the empty pattern ("" — the attach
+// point and its descendants) is meaningful and hand-written policies spell it
+// out explicitly.
 type statementJSON struct {
 	Action    string            `json:"action"`
-	Key       string            `json:"key,omitempty"`
+	Key       string            `json:"key"`
 	Emit      policy.Conclusion `json:"emit"`
 	Reason    *string           `json:"reason,omitempty"`
 	Condition exprJSON          `json:"condition"`
@@ -91,6 +93,8 @@ const (
 	opCCUriOwner = "CCUriOwner"
 	opLoad       = "Load"
 	opConst      = "Const"
+	opConcrnt    = "ConcrntCall"
+	opIsNotEmpty = "IsNotEmpty"
 )
 
 // statementNames maps rule names to the conclusion they emit. Only rules with

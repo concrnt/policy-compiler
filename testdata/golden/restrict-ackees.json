@@ -1,0 +1,108 @@
+{
+  "name": "restrict-ackees",
+  "versions": {
+    "2025-12-23": {
+      "defaults": {
+        "record:read": "ng"
+      },
+      "statements": [
+        {
+          "action": "record:read",
+          "key": "",
+          "emit": "ok",
+          "reason": "reader is the owner or an ackee of the owner",
+          "condition": {
+            "op": "Or",
+            "args": [
+              {
+                "op": "Eq",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "requester.ccid"
+                  },
+                  {
+                    "op": "CCUriOwner",
+                    "args": [
+                      {
+                        "op": "Load",
+                        "const": "self.key"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "And",
+                "args": [
+                  {
+                    "op": "Not",
+                    "args": [
+                      {
+                        "op": "Eq",
+                        "args": [
+                          {
+                            "op": "Load",
+                            "const": "requester.ccid"
+                          },
+                          {
+                            "op": "Const",
+                            "const": ""
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "IsNotEmpty",
+                    "args": [
+                      {
+                        "op": "ConcrntCall",
+                        "args": [
+                          {
+                            "op": "CCUriOwner",
+                            "args": [
+                              {
+                                "op": "Load",
+                                "const": "self.key"
+                              }
+                            ]
+                          },
+                          {
+                            "op": "Const",
+                            "const": "net.concrnt.core.acknowledges"
+                          },
+                          {
+                            "op": "Const",
+                            "const": "from"
+                          },
+                          {
+                            "op": "CCUriOwner",
+                            "args": [
+                              {
+                                "op": "Load",
+                                "const": "self.key"
+                              }
+                            ]
+                          },
+                          {
+                            "op": "Const",
+                            "const": "to"
+                          },
+                          {
+                            "op": "Load",
+                            "const": "requester.ccid"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

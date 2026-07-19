@@ -68,6 +68,7 @@ func TestGoldenMatchesWorldPolicies(t *testing.T) {
 		"allow-writers.json":     "t/allow-writers.json",
 		"write-public.json":      "t/write-public.json",
 		"restrict-readers.json":  "t/restrict-readers.json",
+		"restrict-ackees.json":   "t/restrict-ackees.json",
 		"inline-allow-deny.json": "t/inline-allow-deny.json",
 		"inline-read-write.json": "t/inline-read-write.json",
 	}

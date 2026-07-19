@@ -52,6 +52,7 @@ func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *policy
 	}
 
 	var action, key string
+	var hasKey bool
 	rest := ast.Body{}
 	for _, lit := range rule.Body {
 		op, args, isCall := exprCall(lit)
@@ -86,15 +87,16 @@ func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *policy
 				continue
 			}
 			s, isStr := args[0].Value.(ast.String)
-			if !isStr || s == "" {
-				errs.add(lit.Loc(), "key_matches() takes exactly one non-empty string literal",
-					`e.g. key_matches("./*")`)
+			if !isStr {
+				errs.add(lit.Loc(), "key_matches() takes exactly one string literal",
+					`e.g. key_matches("./*") — or key_matches("") for the attach point and its descendants`)
 				continue
 			}
-			if key != "" {
+			if hasKey {
 				errs.add(lit.Loc(), "duplicate key_matches() in statement", "")
 				continue
 			}
+			hasKey = true
 			key = string(s)
 		case isCall && op == "assign" && reasonVar != "" && len(args) == 2 && isVarNamed(args[0], reasonVar):
 			if lit.Negated {
@@ -121,7 +123,7 @@ func compileStatement(rule *ast.Rule, ec *exprCompiler, errs *ErrorList) *policy
 		errs.add(rule.Loc(), fmt.Sprintf("statement %q does not pin its action", emit),
 			`add a literal like: input.action == "record:read"`)
 	}
-	if key == "" {
+	if !hasKey {
 		errs.add(rule.Loc(), fmt.Sprintf("statement %q has no key pattern", emit),
 			`add key_matches("*") to apply the statement to all keys`)
 	}
