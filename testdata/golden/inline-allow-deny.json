@@ -1,0 +1,206 @@
+{
+  "name": "timeline-inline-allow-deny",
+  "versions": {
+    "2025-12-23": {
+      "statements": [
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is allow-list mode and you are not in the reader list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Load",
+                "const": "params.readListMode"
+              },
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Contains",
+                    "args": [
+                      {
+                        "op": "Load",
+                        "const": "params.reader"
+                      },
+                      {
+                        "op": "Load",
+                        "const": "requester.ccid"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is deny-list mode and you are in the reader list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.readListMode"
+                  }
+                ]
+              },
+              {
+                "op": "Contains",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.reader"
+                  },
+                  {
+                    "op": "Load",
+                    "const": "requester.ccid"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "record:create",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is allow-list mode and you are not in the writer list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Load",
+                "const": "params.writeListMode"
+              },
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Contains",
+                    "args": [
+                      {
+                        "op": "Load",
+                        "const": "params.writer"
+                      },
+                      {
+                        "op": "Load",
+                        "const": "requester.ccid"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "record:create",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is deny-list mode and you are in the writer list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.writeListMode"
+                  }
+                ]
+              },
+              {
+                "op": "Contains",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.writer"
+                  },
+                  {
+                    "op": "Load",
+                    "const": "requester.ccid"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "paramSchema": {
+        "type": "object",
+        "properties": {
+          "writeListMode": {
+            "type": "boolean",
+            "oneOf": [
+              {
+                "const": false,
+                "title": "DenyList"
+              },
+              {
+                "const": true,
+                "title": "AllowList"
+              }
+            ],
+            "default": false
+          },
+          "writer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "readListMode": {
+            "type": "boolean",
+            "oneOf": [
+              {
+                "const": false,
+                "title": "DenyList"
+              },
+              {
+                "const": true,
+                "title": "AllowList"
+              }
+            ],
+            "default": false
+          },
+          "reader": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "writeListMode",
+          "readListMode",
+          "writer",
+          "reader"
+        ],
+        "ui": {
+          "writeListMode": {
+            "ui:widget": "select"
+          },
+          "readListMode": {
+            "ui:widget": "select"
+          },
+          "writer": {
+            "ui:widget": "userPicker"
+          },
+          "reader": {
+            "ui:widget": "userPicker"
+          }
+        }
+      }
+    }
+  }
+}

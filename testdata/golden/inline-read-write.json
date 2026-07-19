@@ -1,0 +1,170 @@
+{
+  "name": "timeline-inline-read-write",
+  "versions": {
+    "2025-12-23": {
+      "statements": [
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is not public and you are not in the reader list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.isReadPublic"
+                  }
+                ]
+              },
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Contains",
+                    "args": [
+                      {
+                        "op": "Load",
+                        "const": "params.reader"
+                      },
+                      {
+                        "op": "Load",
+                        "const": "requester.ccid"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "ok",
+          "reason": "OK this timeline is public",
+          "condition": {
+            "op": "Load",
+            "const": "params.isReadPublic"
+          }
+        },
+        {
+          "action": "record:create",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY this timline is not public and you are not in the writer list",
+          "condition": {
+            "op": "And",
+            "args": [
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.isWritePublic"
+                  }
+                ]
+              },
+              {
+                "op": "Not",
+                "args": [
+                  {
+                    "op": "Contains",
+                    "args": [
+                      {
+                        "op": "Load",
+                        "const": "params.writer"
+                      },
+                      {
+                        "op": "Load",
+                        "const": "requester.ccid"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "record:create",
+          "key": "./*",
+          "emit": "ok",
+          "reason": "OK this timeline is public",
+          "condition": {
+            "op": "Load",
+            "const": "params.isWritePublic"
+          }
+        }
+      ],
+      "paramSchema": {
+        "type": "object",
+        "properties": {
+          "isWritePublic": {
+            "type": "boolean"
+          },
+          "isReadPublic": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "isWritePublic": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "writer": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "isReadPublic": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reader": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "required": [
+          "isWritePublic",
+          "isReadPublic",
+          "writer",
+          "reader"
+        ],
+        "ui": {
+          "writer": {
+            "ui:widget": "userPicker"
+          },
+          "reader": {
+            "ui:widget": "userPicker"
+          }
+        }
+      }
+    }
+  }
+}

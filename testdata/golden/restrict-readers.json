@@ -1,0 +1,51 @@
+{
+  "name": "restrict-readers",
+  "versions": {
+    "2025-12-23": {
+      "statements": [
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "deny",
+          "condition": {
+            "op": "Not",
+            "args": [
+              {
+                "op": "Contains",
+                "args": [
+                  {
+                    "op": "Load",
+                    "const": "params.entities"
+                  },
+                  {
+                    "op": "Load",
+                    "const": "requester.ccid"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "paramSchema": {
+        "type": "object",
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "entities"
+        ],
+        "ui": {
+          "entities": {
+            "ui:widget": "userPicker"
+          }
+        }
+      }
+    }
+  }
+}

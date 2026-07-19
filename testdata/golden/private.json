@@ -1,0 +1,19 @@
+{
+  "name": "private",
+  "versions": {
+    "2025-12-23": {
+      "statements": [
+        {
+          "action": "record:read",
+          "key": ".",
+          "emit": "deny",
+          "reason": "This record is private and cannot be read by others.",
+          "condition": {
+            "op": "Const",
+            "const": true
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "whisper",
+  "description": "Only the author and listed participants can read records.",
+  "versions": {
+    "2025-12-23": {
+      "statements": [
+        {
+          "action": "record:read",
+          "key": "./*",
+          "emit": "deny",
+          "reason": "DENY: you are not a participant of this whisper",
+          "condition": {
+            "op": "Not",
+            "args": [
+              {
+                "op": "Or",
+                "args": [
+                  {
+                    "op": "Eq",
+                    "args": [
+                      {"op": "Load", "const": "self.author"},
+                      {"op": "Load", "const": "requester.ccid"}
+                    ]
+                  },
+                  {
+                    "op": "Contains",
+                    "args": [
+                      {"op": "Load", "const": "params.participants"},
+                      {"op": "Load", "const": "requester.ccid"}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "paramSchema": {
+        "type": "object",
+        "properties": {
+          "participants": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["participants"],
+        "ui": {
+          "participants": {"ui:widget": "userPicker"}
+        }
+      }
+    }
+  }
+}
