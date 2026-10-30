@@ -12,20 +12,20 @@ jobs:
       GOWORK: off
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: policy-compiler
 
       # go.mod が replace github.com/concrnt/concrnt => ../concrnt を持つ
       - name: Checkout concrnt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: concrnt/concrnt
           ref: develop
           path: concrnt
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: policy-compiler/go.mod
 
