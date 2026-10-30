@@ -165,7 +165,7 @@ go test ./...
 
 - `examples/` — [world-policies](https://github.com/concrnt/world-policies) の新形式ポリシーと concrnt 本体のグローバルポリシーをRegoで書き直したもの
 - `testdata/golden/` — examples に対応する期待JSON。テストで意味比較(キー順無視)される
-- `roundtrip_test.go` — コンパイル結果を concrnt 本体の `policy.EvaluatePolicy` で実評価し、既存実装と同じ結論になることを検証(`go.mod` の `replace` で `../concrnt` を参照)
+- `roundtrip_test.go` — コンパイル結果を concrnt 本体の `policy.EvaluatePolicy` で実評価し、既存実装と同じ結論になることを検証(concrnt は develop の pseudo-version に固定。追従は `go get github.com/concrnt/concrnt@develop`)
 
 ## 既知の注意点
 
