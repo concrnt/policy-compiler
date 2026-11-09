@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/concrnt/concrnt v1.12.0-beta0
 	github.com/google/go-cmp v0.7.0
-	github.com/open-policy-agent/opa v1.22.0
+	github.com/open-policy-agent/opa v1.22.2
 	github.com/spf13/cobra v1.10.2
 )
 
