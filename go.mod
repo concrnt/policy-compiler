@@ -3,7 +3,7 @@ module github.com/concrnt/concrnt-policy-compiler
 go 1.26.5
 
 require (
-	github.com/concrnt/concrnt v1.12.0-beta0
+	github.com/concrnt/concrnt v1.12.0
 	github.com/google/go-cmp v0.7.0
 	github.com/open-policy-agent/opa v1.22.4
 	github.com/spf13/cobra v1.10.2
@@ -21,8 +21,8 @@ require (
 	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251001021608-1fe7b43fc4d6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
-	github.com/bytedance/sonic v1.15.1 // indirect
-	github.com/bytedance/sonic/loader v0.5.1 // indirect
+	github.com/bytedance/sonic v1.15.5 // indirect
+	github.com/bytedance/sonic/loader v0.5.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
@@ -105,11 +105,11 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/arch v0.26.0 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
-	golang.org/x/net v0.60.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/grpc v1.85.0 // indirect
